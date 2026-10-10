@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Memory Security Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a research atlas — sticky section nav, the Tier × Defense matrix as the opening map, then library, gaps, articles. */
+:root{
+  --bg:#f3f6f7; --surface:#ffffff; --ink:#14212b; --muted:#566673; --line:#d5dde2;
+  --atk:#a8253f; --atk-soft:#f7e3e7; --def:#0d6b70; --def-soft:#ddefef;
+  --gap:#9a6412; --gap-soft:#f6ebd6; --meas:#4a4f9c; --meas-soft:#e6e7f6;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1418; --surface:#151e24; --ink:#e3eaee; --muted:#93a3ae; --line:#2a3741;
+  --atk:#f07a90; --atk-soft:#3a1c24; --def:#5fc4c6; --def-soft:#15302f;
+  --gap:#e2a94b; --gap-soft:#33270f; --meas:#a5a9f0; --meas-soft:#23254a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1418; --surface:#151e24; --ink:#e3eaee; --muted:#93a3ae; --line:#2a3741;
+  --atk:#f07a90; --atk-soft:#3a1c24; --def:#5fc4c6; --def-soft:#15302f;
+  --gap:#e2a94b; --gap-soft:#33270f; --meas:#a5a9f0; --meas-soft:#23254a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:1.75rem;font-weight:600}
+h3{font-size:1.1rem;font-weight:600}
+a{color:var(--def)}
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--def);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:.82em}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+p{max-width:68ch;margin:0}
+
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;gap:6px 20px;align-items:center;flex-wrap:wrap;padding-block:10px}
+nav.top .brand{font-family:var(--display);font-weight:700;margin-right:auto}
+nav.top a{font-family:var(--display);font-weight:500;text-decoration:none;color:var(--muted)}
+nav.top a:hover{color:var(--ink)}
+
+header.hero{padding-block:44px 28px}
+header.hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:700;letter-spacing:-.01em;max-width:20ch}
+header.hero .lede{margin-top:14px;font-size:1.12rem;color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:22px;font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.stats b{font-family:var(--display);font-size:1.5rem;color:var(--ink);display:block;font-weight:600}
+
+section{padding-block:36px;border-top:1px solid var(--line)}
+.sec-head{display:grid;gap:8px;margin-bottom:20px}
+
+/* Matrix */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+.matrix-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table.matrix{border-collapse:collapse;width:100%;min-width:980px}
+.matrix th,.matrix td{border:1px solid var(--line);vertical-align:top;padding:10px;text-align:left}
+.matrix thead th{font-family:var(--display);font-weight:600;font-size:.92rem;background:var(--bg)}
+.matrix thead th.atkcol{color:var(--atk)}
+.matrix thead th small{display:block;font-family:var(--mono);font-weight:400;font-size:.7rem;color:var(--muted);margin-top:2px}
+.matrix tbody th{width:150px;font-family:var(--display);font-weight:600;background:var(--bg)}
+.matrix tbody th small{display:block;font-family:var(--mono);font-weight:400;font-size:.7rem;color:var(--muted);margin-top:4px}
+.matrix td{min-width:130px}
+.matrix td.empty{background:repeating-linear-gradient(135deg,var(--gap-soft) 0 6px,transparent 6px 12px)}
+.gaptag{font-family:var(--mono);font-size:.72rem;color:var(--gap);font-weight:500;letter-spacing:.06em}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-family:var(--mono);font-size:.74rem;border:1px solid transparent;border-radius:4px;padding:2px 6px;cursor:pointer;line-height:1.35;text-align:left}
+.chip.attack{background:var(--atk-soft);color:var(--atk)}
+.chip.defense{background:var(--def-soft);color:var(--def)}
+.chip.measure{background:var(--meas-soft);color:var(--meas)}
+.chip:hover{border-color:currentColor}
+.chip.thin{font-style:italic}
+.cellnote{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:6px}
+
+/* Tiers */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tier{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.tier dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.92rem}
+.tier dt{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-top:3px}
+.tier dd{margin:0}
+.flag{font-family:var(--mono);font-size:.7rem;color:var(--gap);border:1px solid var(--gap);border-radius:3px;padding:0 5px;margin-left:6px;vertical-align:2px}
+
+/* Library */
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:end}
+.filters label{display:grid;gap:3px;font-family:var(--mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.filters select,.filters input{font:inherit;font-family:var(--display);font-size:.95rem;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);min-width:0}
+.filters input{width:220px;max-width:100%}
+#count{font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-left:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+@media (max-width:420px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:9px;align-content:start;min-width:0;scroll-margin-top:80px;transition:box-shadow .3s}
+.card.flash{box-shadow:0 0 0 3px var(--def)}
+.card .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kind{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:3px}
+.kind.attack{background:var(--atk-soft);color:var(--atk)}
+.kind.defense{background:var(--def-soft);color:var(--def)}
+.kind.measure{background:var(--meas-soft);color:var(--meas)}
+.card h3 a{color:var(--ink);text-decoration:none}
+.card h3 a:hover{text-decoration:underline}
+.card .src{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.card p{font-size:.94rem}
+.card .gapline{font-size:.88rem;border-top:1px dashed var(--line);padding-top:8px;color:var(--muted)}
+.card .gapline b{color:var(--gap);font-family:var(--mono);font-size:.72rem;letter-spacing:.06em}
+.card .cells{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.conf{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+
+/* Gaps */
+.gaps{display:grid;gap:14px;counter-reset:g}
+.gapitem{display:grid;grid-template-columns:56px 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px}
+.gapitem .num{font-family:var(--display);font-size:1.6rem;font-weight:700;color:var(--gap)}
+.gapitem > div{display:grid;gap:8px;min-width:0}
+.gapitem .ev{font-size:.92rem;color:var(--muted)}
+.gapitem .rq{font-size:.95rem}
+.gapitem .rq b,.gapitem .ev b{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+@media (max-width:520px){.gapitem{grid-template-columns:1fr}}
+
+/* Articles */
+.arts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.art{border-left:3px solid var(--line);padding:4px 0 4px 14px;display:grid;gap:4px;min-width:0}
+.art .src{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.art a{font-family:var(--display);font-weight:600;font-size:1.02rem;color:var(--ink)}
+.art p{font-size:.92rem;color:var(--muted)}
+.todo{columns:2 320px;column-gap:28px;font-size:.92rem;padding-left:18px;margin:0}
+.todo li{break-inside:avoid;margin-bottom:6px}
+footer{padding-block:30px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<nav class="top"><div class="wrap">
+  <span class="brand">Agent Memory Security Atlas</span>
+  <a href="#matrix">Matrix</a><a href="#tiers">Memory types</a><a href="#library">Papers</a><a href="#gaps">Gaps</a><a href="#articles">Articles</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Research map · LLM agent memory security &amp; privacy · updated Oct 2026</div>
+  <h1>What has been attacked, what has been defended, and where the gaps are</h1>
+  <p class="lede">Papers from roughly the last 12–18 months, sorted by where the memory lives (memory type) and how the defense works. Hatched cells in the matrix are combinations with no paper in this collection. Those are the candidate research gaps.</p>
+  <div class="stats" id="stats"></div>
+</header>
+
+<section id="matrix">
+  <div class="sec-head">
+    <div class="eyebrow">01 · The map</div>
+    <h2>Memory type × attack / defense matrix</h2>
+    <p>Rows are memory types. The first column lists attacks and the other five list defense mechanisms. Click any paper to jump to its summary.</p>
+  </div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--atk-soft);border:1px solid var(--atk)"></i>attack paper</span>
+    <span><i class="sw" style="background:var(--def-soft);border:1px solid var(--def)"></i>defense paper</span>
+    <span><i class="sw" style="background:var(--meas-soft);border:1px solid var(--meas)"></i>benchmark / measurement</span>
+    <span><i class="sw" style="background:repeating-linear-gradient(135deg,var(--gap-soft) 0 3px,transparent 3px 6px);border:1px solid var(--gap)"></i>empty cell = candidate gap</span>
+    <span><i>italic</i> = 2024 baseline, before the window</span>
+  </div>
+  <div class="matrix-scroll"><table class="matrix" id="mx"></table></div>
+</section>
+
+<section id="tiers">
+  <div class="sec-head">
+    <div class="eyebrow">02 · Memory types</div>
+    <h2>Where agent memory lives, and how it gets attacked</h2>
+    <p>Classified by how memory is stored and retrieved, not by what it contains. Past conversations stored in a vector index count as Vector Store memory, because the attack surface is the similarity search.</p>
+  </div>
+  <div class="tiers" id="tiercards"></div>
+</section>
+
+<section id="library">
+  <div class="sec-head">
+    <div class="eyebrow">03 · Paper library</div>
+    <h2>Papers, with matrix placement and open questions</h2>
+    <p>Each card lists the paper's main result and one specific limitation that could become a research question. Summaries are based on abstracts and paper overviews. Check numbers against the PDF before citing them.</p>
+  </div>
+  <div class="filters">
+    <label for="fTier">Memory type<select id="fTier"></select></label>
+    <label for="fKind">Paper type<select id="fKind"></select></label>
+    <label for="fCol">Mechanism<select id="fCol"></select></label>
+    <label for="fQ">Search<input id="fQ" type="search" placeholder="e.g. provenance, PII"></label>
+    <span id="count"></span>
+  </div>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section id="gaps">
+  <div class="sec-head">
+    <div class="eyebrow">04 · Gap analysis</div>
+    <h2>Open problems to discuss with your advisor</h2>
+    <p>Each gap comes from the matrix or from results that disagree. "Empty" means empty in this collection, not proven unexplored. Run a targeted search before claiming novelty.</p>
+  </div>
+  <div class="gaps" id="gaplist"></div>
+</section>
+
+<section id="articles">
+  <div class="sec-head">
+    <div class="eyebrow">05 · Articles, incidents &amp; ideas</div>
+    <h2>Real-world incidents and practitioner writing</h2>
+    <p>Real-world memory attacks on deployed products, plus industry guidance. These are good motivating examples for a paper introduction.</p>
+  </div>
+  <div class="arts" id="artlist"></div>
+  <div class="sec-head" style="margin-top:34px">
+    <h3>Reading queue: related papers not yet placed in the matrix</h3>
+    <p>Found while searching, but not checked closely enough to place in a cell. Read the abstract before placing.</p>
+  </div>
+  <ul class="todo" id="todo"></ul>
+</section>
+
+<footer>
+  Taxonomy: memory type (episodic/conversational · semantic/vector store · procedural/skill, proposed) × mechanism (write-time validation · access control · architectural isolation · lifecycle · trust/provenance). Compiled October 2026. Not a complete survey.
+</footer>
+</div>
+
+<script>
+const TIERS={
+  epi:{name:"Episodic / Conversational",short:"Episodic",sub:"chat history, summaries, user-profile memory, shared multi-agent state"},
+  vec:{name:"Semantic / Vector Store (RAG)",short:"Vector store",sub:"embedding-indexed memory banks & knowledge bases"},
+  proc:{name:"Procedural / Skill",short:"Procedural",sub:"stored plans, experiences promoted to reusable skills",proposed:true}
+};
+const COLS={
+  atk:{name:"Attacks",sub:"attack class & papers"},
+  write:{name:"Write-time validation",sub:"sanitize / screen before storing"},
+  access:{name:"Access control",sub:"filter at retrieval"},
+  iso:{name:"Architectural isolation",sub:"separate stores by design"},
+  life:{name:"Lifecycle",sub:"expiry, decay, unlearning"},
+  trust:{name:"Trust / provenance",sub:"scoring, lineage, consensus"}
+};
+const KINDS={attack:"Attack",defense:"Defense",measure:"Benchmark / measurement / survey"};
+
+// cells: [tier, col]. kind decides chip colour.
+const P=[
+{id:"agentpoison",s:"AgentPoison",t:"AgentPoison: Red-teaming LLM Agents via Poisoning Memory or Knowledge Bases",a:"Chen et al.",v:"NeurIPS 2024",u:"https://arxiv.org/abs/2407.12784",k:"attack",old:true,cells:[["vec","atk"]],conf:"High",
+ sum:"Baseline backdoor attack: the attacker optimizes a trigger so that poisoned memory or knowledge-base records are retrieved only when the trigger appears in a query, steering the agent's actions.",
+ gap:"Assumes write access to the memory/KB. Most 2025–26 follow-ups (MINJA, GhostWriter) relax this assumption."},
+{id:"minja",s:"MINJA",t:"Memory Injection Attacks on LLM Agents via Query-Only Interaction",a:"Dong et al.",v:"NeurIPS 2025",u:"https://arxiv.org/abs/2503.03704",k:"attack",cells:[["vec","atk"]],conf:"High",
+ sum:"Injects malicious records into an agent's memory bank by only sending queries and observing outputs (bridging steps, indication prompt, progressive shortening). Reports >95% injection success and >70% attack success across GPT-4o-mini, Gemini 2.0 Flash and Llama 3.1 8B.",
+ gap:"Evaluated against simple defenses. Unclear how it fares against consensus (A-MemGuard) or origin-bound authority (TMA-NM)."},
+{id:"mextra",s:"MEXTRA",t:"Unveiling Privacy Risks in LLM Agent Memory",a:"Wang et al.",v:"arXiv 2025",u:"https://arxiv.org/abs/2502.13172",k:"attack",cells:[["vec","atk"]],conf:"High",
+ sum:"Black-box memory extraction: crafted prompts make the agent retrieve and output stored user–agent interactions, leaking private data from the memory module.",
+ gap:"There is almost no defense paper aimed at this single-user extraction setting (see Gap 1)."},
+{id:"memorygraft",s:"MemoryGraft",t:"MemoryGraft: Persistent Compromise of LLM Agents via Poisoned Experience Retrieval",a:"—",v:"arXiv Dec 2025",u:"https://arxiv.org/abs/2512.16962",k:"attack",cells:[["vec","atk"],["proc","atk"]],conf:"Medium (stored in a vector/keyword store, but the content is procedural)",
+ sum:"A benign-looking artifact (e.g. a README) leads the agent to write fake 'successful experiences' into its long-term store. The agent later imitates them and skips validation or runs risky automation. Demonstrated on MetaGPT's DataInterpreter with GPT-4o.",
+ gap:"Single agent and single model. Persistence lasts until the store is rebuilt, so lifecycle defenses are untested."},
+{id:"mama",s:"MAMA (Topology Matters)",t:"Topology Matters: Measuring Memory Leakage in Multi-Agent LLMs",a:"—",v:"ACL Findings 2026",u:"https://arxiv.org/abs/2512.04668",k:"attack",cells:[["epi","atk"]],conf:"High",
+ sum:"Engram/Resonance protocol seeds PII into one agent's memory and has an attacker agent extract it. Denser graphs, shorter attacker–target distance and higher target centrality increase leakage. Location attributes leak more readily than identifiers.",
+ gap:"Recommends topology-aware access control but does not build or evaluate it."},
+{id:"sleeper",s:"Sleeper Memory Poisoning",t:"Hidden in Memory: Sleeper Memory Poisoning in LLM Agents",a:"Pulipaka, …, Abdelnabi, Fritz",v:"ICML 2026",u:"https://arxiv.org/abs/2605.15338",k:"attack",cells:[["epi","atk"]],conf:"Medium (user-profile memory in assistants; storage not vector-based)",
+ sum:"A document, webpage or repo causes the assistant to store a fabricated memory about the user. The memory stays dormant and resurfaces in later conversations. Memory insertion reached up to 99.8% (GPT-5.5). Successful insertions caused the attacker-intended action in 60–89% of evaluations.",
+ gap:"Dormancy across sessions directly challenges decay- or expiry-based defenses, and nobody has tested that interaction."},
+{id:"ghostwriter",s:"GhostWriter + AM-Sentry",t:"When Agents Remember Too Much: Memory Poisoning Attacks on Large Language Model Agents",a:"—",v:"arXiv Jul 2026",u:"https://arxiv.org/abs/2607.06595",k:"attack",cells:[["epi","atk"],["epi","write"]],conf:"Medium (attack + defense)",
+ sum:"Personal agents record every tool interaction (an email, a calendar invite) as fact. GhostWriter abuses this: about 98% injection and about 60% activation. The proposed AM-Sentry adds a memory-saving policy and a retrieval screen.",
+ gap:"AM-Sentry is evaluated by the attack's own authors. An adaptive attacker that knows the saving policy is not evaluated."},
+{id:"untrusted",s:"MPBench",t:"From Untrusted Input to Trusted Memory: A Systematic Study of Memory Poisoning Attacks in LLM Agents",a:"—",v:"ICML 2026",u:"https://arxiv.org/abs/2606.04329",k:"measure",cells:[["proc","atk"],["vec","atk"]],conf:"Medium",
+ sum:"Identifies four memory write channels (explicit writes, system-prompt-driven writes, compaction, experience→procedure), nine structural vulnerabilities and six attack classes, and releases MPBench. Agents that write memory more aggressively are more exploitable. Prompt-injection defenses only partly cover memory poisoning.",
+ gap:"Attack-side benchmark. Defense comparison on MPBench is still open."},
+{id:"skilljack",s:"SkillJack",t:"SkillJack: Persistent Skill Backdoors in Self-Evolving Agents",a:"—",v:"arXiv Aug 2026",u:"https://arxiv.org/abs/2608.03509",k:"attack",cells:[["proc","atk"]],conf:"Medium",
+ sum:"Self-evolving agents promote recurring execution traces into reusable skills. Attacker-controlled, task-plausible trajectories survive aggregation and end up in generated skill files.",
+ gap:"No dedicated defense for skill/procedure memory found (Gap 5)."},
+{id:"secskills",s:"Secure Agent Skills",t:"Towards Secure Agent Skills: Architecture, Threat Taxonomy, and Security Analysis",a:"—",v:"arXiv Apr 2026",u:"https://arxiv.org/abs/2604.02837",k:"measure",cells:[["proc","atk"]],conf:"Medium",
+ sum:"Threat taxonomy and security analysis for agent skill architectures. A useful starting point for defining the procedural memory type.",
+ gap:"Analysis, not a defense evaluation."},
+{id:"pivot",s:"Retrieval Pivot",t:"Retrieval Pivot Attacks in Hybrid RAG",a:"—",v:"arXiv Feb 2026",u:"https://arxiv.org/abs/2602.08668",k:"attack",cells:[["vec","atk"]],conf:"Medium",
+ sum:"In hybrid vector + knowledge-graph pipelines, a chunk retrieved by similarity can pivot through entity links into sensitive graph neighborhoods and leak data.",
+ gap:"Shows that access control must cover graph expansion, not only the vector search step."},
+{id:"amemguard",s:"A-MemGuard",t:"A-MemGuard: A Proactive Defense Framework for LLM-Based Agent Memory",a:"—",v:"arXiv Oct 2025",u:"https://arxiv.org/abs/2510.02373",k:"defense",cells:[["vec","trust"]],conf:"High",
+ sum:"Consensus-based validation compares reasoning paths from several related memories to detect a poisoned one. A dual-memory structure stores detected failures as 'lessons'. Reports >95% reduction in attack success at minimal utility cost.",
+ gap:"Consensus assumes most related memories are clean. Not tested against attackers who plant several mutually consistent records (manufactured corroboration, per TMA-NM)."},
+{id:"mpad",s:"Trust-aware Sanitization",t:"Memory Poisoning Attack and Defense on Memory Based LLM-Agents",a:"—",v:"arXiv Jan 2026",u:"https://arxiv.org/abs/2601.05504",k:"defense",cells:[["vec","write"],["vec","trust"],["vec","life"]],conf:"High",
+ sum:"Defends against query-only poisoning in two ways. Input/output moderation uses a composite trust score from several signals. Memory sanitization uses trust-aware retrieval with temporal decay, so older entries count as less trusted.",
+ gap:"The only paper here that uses time decay as a defense. Sleeper attacks suggest decay alone may not be enough."},
+{id:"memlineage",s:"MemLineage",t:"MemLineage: Lineage-Guided Enforcement for LLM Agent Memory",a:"Ouyang & Hou",v:"arXiv May 2026",u:"https://arxiv.org/abs/2605.14421",k:"defense",cells:[["vec","trust"]],conf:"High",
+ sum:"Treats memory safety as chain of custody. Entries are signed and stored in a Merkle log. A derivation DAG records which memories influenced new ones, and a gate blocks sensitive actions justified by externally derived memory. Reported 0% attack success with sub-millisecond overhead.",
+ gap:"Shown to be malleable by TMA-NM: summarization and trusted-tool echo can launder lineage."},
+{id:"tmanm",s:"TMA-NM",t:"Securing LLM-Agent Long-Term Memory Against Poisoning: Non-Malleable, Origin-Bound Authority with Machine-Checked Guarantees",a:"—",v:"arXiv Jun 2026",u:"https://arxiv.org/abs/2606.24322",k:"defense",cells:[["vec","write"],["vec","trust"]],conf:"High",
+ sum:"Proves that content-based and lineage-based authority are unsound under laundering (via the agent's own summarizer, trusted-tool echo, or manufactured corroboration). Write-time origin binding is necessary. Origin-bound authority with Sybil-resistant corroboration is sufficient. 0% attack success across eight models.",
+ gap:"Integrity only. Says nothing about confidentiality or extraction. The utility cost of origin binding on mixed-provenance memory is an open question."},
+{id:"utility",s:"Utility Under Attack",t:"Utility Under Attack: Agent Memory Poisoning and the Limits of Content Screening and Provenance Ranking",a:"—",v:"arXiv Aug 2026",u:"https://arxiv.org/abs/2608.21230",k:"measure",cells:[["vec","write"],["vec","trust"]],conf:"High",
+ sum:"Poisoning 1.2% of a memory benchmark with plain false statements drops accuracy from 85% to 30%. A screener that catches 83% of indirect prompt injections caught 0 of 360 false-fact memories. Provenance ranking was statistically the same as no defense. Excluding untrusted content becomes a denial-of-service when that content is useful.",
+ gap:"Shows that false facts (no instructions) bypass injection-oriented defenses. How to verify facts at write time is still open."},
+{id:"price",s:"Price of Safety",t:"The Price of Safety: Benign-Case Utility and Token Overhead of Memory-Poisoning Defenses in LLM Agents",a:"Bhowmik",v:"arXiv Sep 2026",u:"https://arxiv.org/abs/2609.22818",k:"measure",cells:[["vec","write"],["vec","trust"]],conf:"High",
+ sum:"Measures defense cost on purely benign traffic. Three write-time defenses had no measurable utility cost. A read-time reranker cost 4.4 accuracy points, quarantined legitimate memories on 33.6% of items, and added 2.7% token overhead.",
+ gap:"Cost only, without security under attack. Pair it with Utility Under Attack for a full trade-off curve."},
+{id:"trustrag",s:"TrustRAG",t:"TrustRAG: Enhancing Robustness and Trustworthiness in Retrieval-Augmented Generation",a:"Zhou et al.",v:"arXiv 2025",u:"https://arxiv.org/abs/2501.00879",k:"defense",cells:[["vec","trust"]],conf:"Medium (RAG knowledge base, not agent memory)",
+ sum:"Two-stage filter: K-means clustering over retrieved texts (cosine + ROUGE) flags suspicious groups. The LLM then compares retrieved and internal knowledge and drops conflicting texts.",
+ gap:"Built for a static RAG corpus. Not tested on memory the agent writes itself, where poisoned records come from its own interactions."},
+{id:"ragforensics",s:"RAGForensics",t:"Traceback of Poisoning Attacks to Retrieval-Augmented Generation",a:"—",v:"arXiv 2025",u:"https://arxiv.org/abs/2504.21668",k:"defense",cells:[["vec","trust"],["vec","life"]],conf:"Medium (post-hoc forensics)",
+ sum:"After a wrong output, iteratively retrieves candidate texts and uses an LLM to identify the poisoned ones responsible. Reports >97.4% detection accuracy with <2.7% false positives.",
+ gap:"Traceback for agent memory (multi-step, self-written records) is unexplored. It would naturally pair with lifecycle cleanup."},
+{id:"collab",s:"Collaborative Memory",t:"Collaborative Memory: Multi-User Memory Sharing in LLM Agents with Dynamic Access Control",a:"Rezazadeh et al.",v:"ICML 2025",u:"https://arxiv.org/abs/2505.18279",k:"defense",cells:[["epi","access"],["epi","iso"]],conf:"High",
+ sum:"Private and shared memory tiers, with time-varying permissions encoded as bipartite user–agent–resource graphs. Each fragment carries immutable provenance, and read/write policies build filtered views. Strictly follows policies under dynamic permission changes.",
+ gap:"Designed for utility under permissions, not tested against an adversary (no extraction or MAMA-style attack)."},
+{id:"agentsafe",s:"AgentSafe",t:"AgentSafe: Safeguarding Large Language Model-based Multi-agent Systems via Hierarchical Data Management",a:"—",v:"arXiv 2025",u:"https://arxiv.org/abs/2503.04392",k:"defense",cells:[["epi","iso"],["epi","access"],["epi","trust"]],conf:"High",
+ sum:"ThreatSieve checks message authority to stop impersonation. HierarCache stores memory in security-level layers plus a 'junk' layer for harmful content. Defense success above 80%. Memory similarity stays above 0.65 after 10 rounds of memory attacks.",
+ gap:"Security levels are assigned by an LLM, and misclassification is not stress-tested."},
+{id:"spmem",s:"SP-Mem",t:"What to Remember, What to Reveal: Privacy-Aware Memory for Conversational Agents",a:"Wang, Si, Xu, Xu",v:"arXiv Aug 2026",u:"https://arxiv.org/abs/2608.16551",k:"defense",cells:[["epi","write"],["epi","iso"],["epi","access"]],conf:"High",
+ sum:"Separates sensitive spans from user input, stores sanitized memory and exact private values in isolated structures, and retrieves private values only when the task needs them and the user consents. Includes a privacy-aware memory benchmark (quality, privacy, cost).",
+ gap:"Benign evaluation. Not tested against an active extraction attacker (MEXTRA-style)."},
+{id:"memprivacy",s:"MemPrivacy",t:"MemPrivacy: Privacy-Preserving Personalized Memory Management for Edge-Cloud Agents",a:"—",v:"arXiv May 2026",u:"https://arxiv.org/abs/2605.09530",k:"defense",cells:[["epi","write"],["epi","iso"]],conf:"Medium",
+ sum:"Finds privacy-sensitive spans on the device and replaces them with typed placeholders before cloud memory processing. Original values are restored locally.",
+ gap:"Protects against the cloud provider. Leakage through the summaries the cloud builds from placeholders is not studied."},
+{id:"superlocal",s:"SuperLocalMemory",t:"SuperLocalMemory: Privacy-Preserving Multi-Agent Memory with …",a:"—",v:"arXiv Mar 2026",u:"https://arxiv.org/abs/2603.02240",k:"defense",cells:[["vec","iso"],["vec","trust"]],conf:"Medium",
+ sum:"Local-first memory system that combines architectural isolation with Bayesian trust scoring against poisoning, plus adaptive learning-to-rank for personalized retrieval.",
+ gap:"Systems paper. Check whether its threat model includes an adaptive poisoner."},
+{id:"multitenant",s:"Multitenant Retrieval Gate",t:"Securing the Agent: Vendor-Neutral, Multitenant Enterprise Retrieval and Tool Use",a:"—",v:"arXiv May 2026",u:"https://arxiv.org/abs/2605.05287",k:"defense",cells:[["vec","access"]],conf:"Medium",
+ sum:"Formalizes the relevance-authorization gap in multitenant RAG. Ungated retrieval leaked cross-tenant data in 98–100% of probes. Proposes authorization-gated retrieval and tool use.",
+ gap:"Enterprise documents, not memory the agent writes itself. Per-user agent memory banks need the same treatment."},
+{id:"unlearn",s:"Agentic Unlearning",t:"Agentic Unlearning: When LLM Agent Meets Machine Unlearning",a:"—",v:"arXiv Feb 2026",u:"https://arxiv.org/abs/2602.17692",k:"defense",cells:[["epi","life"],["vec","life"]],conf:"Medium",
+ sum:"Sensitive information persists both in model weights and in external memory (indices, summaries, embeddings, caches). The proposed SBU method removes targeted private information from both, with limited loss on retained data (medical QA).",
+ gap:"Verifying that derived memories (summaries of summaries) are also removed is still open (Gap 3)."},
+{id:"secforget",s:"Secure Forgetting",t:"Secure Forgetting: A Framework for Privacy-Driven Unlearning in LLM-Based Agents",a:"—",v:"arXiv 2026",u:"https://arxiv.org/abs/2604.00430",k:"defense",cells:[["epi","life"]],conf:"Low (abstract only)",
+ sum:"Frames 'LLM-based agent unlearning' as a new problem and proposes a framework for forgetting sensitive or outdated knowledge accumulated by agents.",
+ gap:"Read the full paper to see whether it covers adversarial forgetting requests or verification."},
+{id:"survey",s:"Memory Lifecycle Survey",t:"A Survey on Long-Term Memory Security in LLM Agents: Attacks, Defenses, and Governance Across the Memory Lifecycle",a:"—",v:"arXiv Apr 2026",u:"https://arxiv.org/abs/2604.16548",k:"measure",cells:[],conf:"—",
+ sum:"Organizes the field along six lifecycle phases (Write, Store, Retrieve, Execute, Share & Propagate, Forget & Rollback) and four objectives (Integrity, Confidentiality, Availability, Governance). Read this first, and use its phases to check this matrix.",
+ gap:"Compare its open-problems list with the gaps below before claiming novelty."}
+];
+
+const GAPS=[
+{t:"Privacy defenses lag far behind poisoning defenses",
+ ev:"Most defense papers here protect integrity (A-MemGuard, MemLineage, TMA-NM, trust-aware sanitization). The only defense against MEXTRA-style extraction from a single user's agent memory is benign-only privacy design (SP-Mem, MemPrivacy). Access-control work is multi-tenant (Collaborative Memory, multitenant gate).",
+ rq:"Can retrieval-time defenses (query-pattern detection, differentially private retrieval, output auditing of retrieved records) bound extraction from an agent's own memory bank, and what personalization do they cost?",
+ cells:"Vector store × Access control / Write-time, against Extraction"},
+{t:"Summarization and compression leakage has no attack paper",
+ ev:"The taxonomy has a summarization/compression leakage class, but no paper measures which private attributes survive compression. Summarization appears only as an injection channel (Unit 42 Bedrock PoC, MPBench's 'compaction' channel, TMA-NM's laundering).",
+ rq:"Build a benchmark: at different summarization levels, which PII/attribute types persist into long-term memory, and can a privacy-aware summarizer remove them without losing personalization?",
+ cells:"Episodic × Attacks (summarization class) and Episodic × Write-time"},
+{t:"Lifecycle defenses are barely explored and conflict with dormant attacks",
+ ev:"Only one paper uses temporal decay as a defense (2601.05504). Sleeper poisoning is designed to stay dormant and resurface. Unlearning papers remove raw records but do not verify removal from derived memories.",
+ rq:"(a) How does expiry or decay interact with sleeper attacks? Does decay delay activation or prevent it? (b) Lineage-aware unlearning: use a MemLineage-style derivation DAG to delete a record and everything derived from it, then verify deletion.",
+ cells:"All memory types × Lifecycle"},
+{t:"Results on trust scoring disagree",
+ ev:"A-MemGuard reports >95% attack reduction from consensus. Utility Under Attack finds provenance ranking no better than no defense and screening blind to false facts. TMA-NM proves content- and lineage-based authority unsound under laundering.",
+ rq:"Evaluate A-MemGuard, MemLineage, TMA-NM and trust-aware sanitization on one benchmark (e.g. MPBench) with an adaptive, laundering attacker and false-fact poisoning. Which assumptions explain the disagreement?",
+ cells:"Vector store × Trust / provenance"},
+{t:"Procedural / skill memory has no defenses",
+ ev:"SkillJack, MemoryGraft and MPBench's experience→procedure channel show attacks on memory that becomes reusable procedures. No defense paper targets this memory type.",
+ rq:"Can skill promotion be gated (provenance of contributing traces, differential testing of a new skill against held-out tasks, sandboxed first execution)?",
+ cells:"Procedural × every defense column"},
+{t:"Multi-agent leakage: recommended defenses are not evaluated",
+ ev:"MAMA measures topology-driven leakage and recommends topology-aware access control without testing it. AgentSafe and Collaborative Memory are each evaluated under a different threat model.",
+ rq:"Implement topology-aware access control or isolation, and evaluate it plus AgentSafe and Collaborative Memory under the MAMA protocol.",
+ cells:"Episodic × Access control / Isolation, against Cross-agent leakage"},
+{t:"No benchmark covers both integrity and privacy",
+ ev:"MPBench and Utility Under Attack measure poisoning. MAMA and MEXTRA measure leakage. Price of Safety measures cost. A defense can improve one side and hurt the other (e.g. isolation helps privacy but may hide corroborating evidence).",
+ rq:"A joint benchmark reporting attack success (poisoning), extraction rate (privacy) and benign utility for each defense, across all three memory types.",
+ cells:"Whole matrix"}
+];
+
+const ARTS=[
+{t:"When AI Remembers Too Much: Indirect prompt injection poisons agent long-term memory",s:"Palo Alto Networks Unit 42 · 2025",u:"https://unit42.paloaltonetworks.com/indirect-prompt-injection-poisons-ai-longterm-memory/",d:"Proof of concept on Amazon Bedrock Agents: a malicious web page manipulates session summarization, so injected instructions are stored in memory and later exfiltrate conversation history. A real-world example of the summarization channel."},
+{t:"New hack uses prompt injection to corrupt Gemini's long-term memory",s:"InfoQ · Feb 2025 (Johann Rehberger)",u:"https://www.infoq.com/news/2025/02/gemini-long-term-memory-attack/",d:"'Delayed tool invocation': a document says 'if the user says X, save this memory', and the memory write fires later, persisting across all sessions."},
+{t:"SpAIware and other memory exploits",s:"Embrace The Red (Rehberger) · 2024–2025",u:"https://embracethered.com/blog/",d:"ChatGPT macOS memory injection that sent every later conversation to an attacker server. Early proof that writable memory plus prompt injection gives persistent exfiltration."},
+{t:"Agentic AI: Threats and Mitigations",s:"OWASP GenAI Security Project · 2025",u:"https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/",d:"Industry threat taxonomy that lists memory poisoning as a top agentic threat. Useful for connecting academic classes to practitioner language."},
+{t:"Memory poisoning in AI agents: exploits that wait",s:"Christian Schneider · blog",u:"https://christian-schneider.net/blog/persistent-memory-poisoning-in-ai-agents/",d:"Practitioner overview of persistent memory poisoning and why delayed activation makes detection hard."},
+{t:"Defending against agent memory poisoning",s:"Zep engineering blog",u:"https://blog.getzep.com/defending-agent-memory-poisoning/",d:"A memory-infrastructure vendor's view of practical defenses. Shows what production memory systems actually deploy."},
+{t:"Agent memory poisoning defenses (news coverage)",s:"The Cryptonomist · Aug 2026",u:"https://en.cryptonomist.ch/2026/08/24/agent-memory-poisoning-defenses/",d:"Press coverage of the accuracy collapse from false-fact memory poisoning (Utility Under Attack)."},
+{t:"Privacy, federated memory and personalized agents (talk)",s:"Niloofar Mireshghallah · Simons Institute · Mar 2026",u:"https://simons.berkeley.edu/talks/niloofar-mireshghallah-carnegie-mellon-university-2026-03-17",d:"Contextual-integrity view of personal agents that collect user memories. A good framing for the privacy half of the thesis."}
+];
+
+const TODO=[
+["Safeguarding LLM Agents against Long-Horizon Threats via Shadow Memory","https://arxiv.org/abs/2605.03228"],
+["AgentSys: Secure and Dynamic LLM Agents Through Explicit Hierarchical Memory Management","https://arxiv.org/abs/2602.07398"],
+["MemPoison: Uncovering Persistent Memory Threats and Structural Blind Spots in LLM Agents","https://arxiv.org/abs/2607.14651"],
+["Secure Retrieval-Augmented Generation against Poisoning Attacks","https://arxiv.org/abs/2510.25025"],
+["Information-Theoretic Privacy Control for Sequential Multi-Agent LLM Systems","https://arxiv.org/abs/2603.05520"],
+["AIM: A Privacy-Aware Interoperable Memory","https://arxiv.org/abs/2609.12320"],
+["Knowledge Base Poisoning Attacks and Defense for Policy-Aware LLM-RAG Framework","https://arxiv.org/abs/2607.04379"],
+["Beyond Similarity Search: A Unified Data Layer for Production RAG Systems (access control, multi-tenancy)","https://arxiv.org/abs/2605.03275"],
+["memorywire: A Vendor-Neutral Wire Format for Agent Memory Operations","https://arxiv.org/abs/2606.01138"],
+["Compositional Threat Analysis of Latent Compromise in LLM Agent Systems","https://arxiv.org/abs/2608.08131"]
+];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// stats
+const nDef=P.filter(p=>p.k==="defense").length,nAtk=P.filter(p=>p.k==="attack").length;
+let empty=0;
+// matrix
+(function(){
+  let h="<thead><tr><th>Memory type</th>";
+  for(const [k,c] of Object.entries(COLS)) h+=`<th class="${k==="atk"?"atkcol":""}">${c.name}<small>${c.sub}</small></th>`;
+  h+="</tr></thead><tbody>";
+  for(const [tk,t] of Object.entries(TIERS)){
+    h+=`<tr><th scope="row">${t.short}${t.proposed?'<span class="flag">proposed</span>':""}<small>${t.sub}</small></th>`;
+    for(const ck of Object.keys(COLS)){
+      const ps=P.filter(p=>p.cells.some(([a,b])=>a===tk&&b===ck));
+      if(!ps.length){empty++;h+=`<td class="empty"><span class="gaptag">GAP</span></td>`;continue;}
+      h+=`<td><div class="chips">${ps.map(p=>`<button class="chip ${p.k}${p.old?" thin":""}" data-id="${p.id}" title="${esc(p.t)}">${esc(p.s)}</button>`).join("")}</div>`;
+      if(ck!=="atk"&&ps.every(p=>p.k!=="defense")) h+=`<div class="cellnote">evaluations only, no new defense</div>`;
+      else if(ck!=="atk"&&ps.filter(p=>p.k==="defense").length===1) h+=`<div class="cellnote">thin: 1 defense</div>`;
+      h+="</td>";
+    }
+    h+="</tr>";
+  }
+  $("#mx").innerHTML=h+"</tbody>";
+})();
+$("#stats").innerHTML=`<span><b>${P.length}</b>papers placed</span><span><b>${nAtk}</b>attacks</span><span><b>${nDef}</b>defenses</span><span><b>${empty}</b>empty cells</span><span><b>${GAPS.length}</b>research gaps</span>`;
+
+// tier cards
+const TDESC={
+ epi:{what:"Running conversation, session summaries, user-profile facts (\"user prefers…\"), shared state between agents.",atk:"Cross-session leakage · summarization leakage · cross-agent leakage · fabricated user memories (sleeper)",ex:"ChatGPT/Gemini memory, Bedrock session summaries, multi-agent blackboards"},
+ vec:{what:"Records retrieved by embedding similarity: RAG knowledge bases and agent memory banks of past (query, action, result) records.",atk:"Memory poisoning (backdoor, query-only, false-fact) · extraction / retrieval hijacking · retrieval pivots",ex:"Vector DB memories (Mem0-style), experience replay for agents, enterprise RAG"},
+ proc:{what:"Stored plans, workflows and skills that the agent distills from past successful runs and reuses as instructions.",atk:"Experience grafting · skill backdoors · experience→procedure poisoning",ex:"Self-evolving agents, skill libraries, agent-generated SKILL files"}
+};
+$("#tiercards").innerHTML=Object.entries(TIERS).map(([k,t])=>{
+  const d=TDESC[k],n=P.filter(p=>p.cells.some(c=>c[0]===k)).length;
+  const nd=P.filter(p=>p.k==="defense"&&p.cells.some(c=>c[0]===k)).length;
+  return `<div class="tier"><h3>${t.name}${t.proposed?'<span class="flag">proposed tier</span>':""}</h3>
+  <dl><dt>What</dt><dd>${d.what}</dd><dt>Attacks</dt><dd>${d.atk}</dd><dt>Seen in</dt><dd>${d.ex}</dd>
+  <dt>Coverage</dt><dd class="mono">${n} papers · ${nd} defenses</dd></dl></div>`}).join("");
+
+// library
+const fill=(sel,opts)=>{sel.innerHTML=opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")};
+fill($("#fTier"),[["","All memory types"],...Object.entries(TIERS).map(([k,t])=>[k,t.short])]);
+fill($("#fKind"),[["","All paper types"],...Object.entries(KINDS)]);
+fill($("#fCol"),[["","All mechanisms"],...Object.entries(COLS).filter(([k])=>k!=="atk").map(([k,c])=>[k,c.name])]);
+function cellLabel(c){return `${TIERS[c[0]].short} × ${c[1]==="atk"?"Attack":COLS[c[1]].name}`}
+function render(){
+  const ft=$("#fTier").value,fk=$("#fKind").value,fc=$("#fCol").value,q=$("#fQ").value.trim().toLowerCase();
+  const list=P.filter(p=>(!ft||p.cells.some(c=>c[0]===ft))&&(!fk||p.k===fk)&&(!fc||p.cells.some(c=>c[1]===fc))&&
+    (!q||(p.t+p.s+p.sum+p.gap).toLowerCase().includes(q)));
+  $("#count").textContent=`${list.length} of ${P.length}`;
+  $("#cards").innerHTML=list.map(p=>`<article class="card" id="p-${p.id}">
+    <div class="meta"><span class="kind ${p.k}">${KINDS[p.k].split(" ")[0]}</span><span class="src">${esc(p.v)}</span></div>
+    <h3><a href="${p.u}" target="_blank" rel="noopener">${esc(p.s)}</a></h3>
+    <div class="src">${esc(p.t)}${p.a!=="—"?" · "+esc(p.a):""}</div>
+    <p>${esc(p.sum)}</p>
+    ${p.cells.length?`<div class="cells">Cell: ${p.cells.map(cellLabel).join(" · ")}</div>`:""}
+    <div class="conf">Placement confidence: ${esc(p.conf)}</div>
+    <div class="gapline"><b>OPEN QUESTION</b> ${esc(p.gap)}</div>
+  </article>`).join("")||`<p>No papers match these filters. Clear a filter to see more.</p>`;
+}
+["#fTier","#fKind","#fCol"].forEach(s=>$(s).addEventListener("change",render));
+$("#fQ").addEventListener("input",render);
+render();
+
+$("#mx").addEventListener("click",e=>{
+  const b=e.target.closest(".chip");if(!b)return;
+  $("#fTier").value="";$("#fKind").value="";$("#fCol").value="";$("#fQ").value="";render();
+  const el=document.getElementById("p-"+b.dataset.id);
+  el.scrollIntoView({block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1600);
+});
+
+// gaps
+$("#gaplist").innerHTML=GAPS.map((g,i)=>`<div class="gapitem"><div class="num">G${i+1}</div><div>
+  <h3>${esc(g.t)}</h3><div class="ev"><b>Evidence</b> ${esc(g.ev)}</div>
+  <div class="rq"><b>Research question</b> ${esc(g.rq)}</div><div class="cellnote">Matrix: ${esc(g.cells)}</div></div></div>`).join("");
+
+// articles
+$("#artlist").innerHTML=ARTS.map(a=>`<div class="art"><span class="src">${esc(a.s)}</span><a href="${a.u}" target="_blank" rel="noopener">${esc(a.t)}</a><p>${esc(a.d)}</p></div>`).join("");
+$("#todo").innerHTML=TODO.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("");
+</script>
+
+</html>
